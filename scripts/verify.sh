@@ -4,7 +4,9 @@ cd "$(dirname "$0")/.."
 swift test --parallel
 swift build -Xswiftc -warnings-as-errors
 # Compile a separate consumer, without @testable, to catch internal-only initializers.
-swiftc -typecheck -I "$(swift build --show-bin-path)/Modules" scripts/PublicAPICheck.swift
+bin_path="$(swift build --show-bin-path)"
+# SwiftPM's native and Swift Build backends place modules in different directories.
+swiftc -typecheck -I "$bin_path/Modules" -I "$bin_path" scripts/PublicAPICheck.swift
 # A syntax check only; this does NOT type-check against Apple SDKs on Linux.
 while IFS= read -r -d '' file; do
   swiftc -frontend -parse "$file"
