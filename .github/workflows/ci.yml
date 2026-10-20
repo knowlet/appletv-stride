@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stride-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    container: swift:6.2.1
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Core tests, strict build, syntax and property lists
+        run: bash scripts/verify.sh
+  apple-builds:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Test core with Apple's Swift toolchain
+        run: swift test --parallel
+      - name: Build iOS and tvOS simulator apps
+        run: bash scripts/build-apple.sh
+      - name: Retain build logs and unsigned simulator apps
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stride-apple-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
